@@ -1,0 +1,22 @@
+{
+  "name": "association",
+  "version": "0.0.1",
+  "description": "Automatic semantic memory recall for AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/**/*.test.js",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": ["ai", "memory", "semantic", "recall", "agents"],
+  "author": "Cassivator",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ai": "^4.0.0"
+  }
+}
