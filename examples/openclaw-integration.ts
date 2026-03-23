@@ -1,6 +1,6 @@
 /**
  * OpenClaw Integration Example for Association
- * 
+ *
  * This shows how to use Association with OpenClaw's memory system.
  * Place this in your workspace and import it from your HEARTBEAT.md processing.
  */
@@ -19,8 +19,8 @@ export function createOpenClawAssociation() {
   return createAssociation({
     memoryDir: join(OPENCLAW_MEMORY_DIR, 'association-memory'),
     maxWorkingSet: 100,
-    similarityThreshold: 0.3,
-    minKeywordMatches: 2,
+    similarityThreshold: 0.1, // Lower threshold for better recall
+    minKeywordMatches: 1,
     compressionAgeDays: 7,
     maxSurfacedMemories: 5,
   });
@@ -28,7 +28,7 @@ export function createOpenClawAssociation() {
 
 /**
  * Process an incoming message and surface relevant memories
- * 
+ *
  * Call this from your heartbeat handler or message processor
  */
 export async function processMessage(
@@ -36,7 +36,8 @@ export async function processMessage(
   metadata?: { sender?: string; channel?: string }
 ): Promise<ProcessResult> {
   const association = createOpenClawAssociation();
-  
+  await association.init();
+
   // Process the message - this surfaces relevant memories
   const result = await association.process({
     content,
@@ -45,21 +46,21 @@ export async function processMessage(
       timestamp: new Date(),
     },
   });
-  
-  // If memories were surfaced, they're available in result.memories
-  if (result.memories.length > 0) {
-    console.log(`[Association] Surfaced ${result.memories.length} memories:`);
-    for (const m of result.memories) {
-      console.log(`  - "${m.memory.content.slice(0, 50)}..." (${m.reason}, relevance: ${m.relevance.toFixed(2)})`);
+
+  // If memories were surfaced, they're available in result.surfaced
+  if (result.surfaced.length > 0) {
+    console.log(`[Association] Surfaced ${result.surfaced.length} memories:`);
+    for (const m of result.surfaced) {
+      console.log(` - "${m.memory.content.slice(0, 50)}..." (${m.reason}, relevance: ${m.relevance.toFixed(2)})`);
     }
   }
-  
+
   return result;
 }
 
 /**
  * Save a memory from conversation
- * 
+ *
  * Call this when something important happens that should be remembered
  */
 export async function saveMemory(
@@ -68,16 +69,17 @@ export async function saveMemory(
   source?: string
 ): Promise<string> {
   const association = createOpenClawAssociation();
-  const id = await association.remember(content, { tags, source });
-  console.log(`[Association] Saved memory ${id}`);
-  return id;
+  await association.init();
+  const memory = await association.remember(content, { tags, source });
+  console.log(`[Association] Saved memory ${memory.id}`);
+  return memory.id;
 }
 
 /**
  * Example: Integrate with OpenClaw heartbeat
- * 
+ *
  * Add this to your HEARTBEAT.md processing:
- * 
+ *
  * ```
  * ### Memory Association Check
  * - Run processMessage on current context
@@ -89,12 +91,12 @@ export async function heartbeatMemoryCheck(
   currentContext: string,
   importantFacts?: string[]
 ): Promise<{
-  surfacedMemories: ProcessResult['memories'];
+  surfacedMemories: ProcessResult['surfaced'];
   newMemoryIds: string[];
 }> {
   // Process current context to surface relevant memories
   const result = await processMessage(currentContext);
-  
+
   // Save any important facts as new memories
   const newMemoryIds: string[] = [];
   if (importantFacts) {
@@ -103,50 +105,70 @@ export async function heartbeatMemoryCheck(
       newMemoryIds.push(id);
     }
   }
-  
+
   return {
-    surfacedMemories: result.memories,
+    surfacedMemories: result.surfaced,
     newMemoryIds,
   };
 }
 
 /**
  * Example: Sync with MEMORY.md
- * 
+ *
  * This reads your MEMORY.md and imports it into Association
  */
 export async function syncFromMemoryDotMd(): Promise<number> {
   const memoryPath = join(OPENCLAW_MEMORY_DIR, 'MEMORY.md');
-  
   if (!existsSync(memoryPath)) {
     console.log('[Association] No MEMORY.md found');
     return 0;
   }
-  
+
   const content = readFileSync(memoryPath, 'utf-8');
   const association = createOpenClawAssociation();
-  
-  // Split into sections and import each
-  const sections = content.split(/^## /m).filter(Boolean);
-  let imported = 0;
-  
-  for (const section of sections) {
-    const lines = section.trim().split('\n');
-    const title = lines[0];
-    const body = lines.slice(1).join('\n').trim();
-    
-    if (body.length > 20) { // Only import substantial content
-      await association.remember(
-        `${title}\n\n${body}`,
-        { 
-          tags: ['memory-md', 'imported'],
-          source: 'MEMORY.md'
+  await association.init();
+
+  // Parse sections by tracking headings (## and ###)
+  const lines = content.split('\n');
+  const sections: { title: string; content: string }[] = [];
+  let currentTitle = '';
+  let currentContent: string[] = [];
+
+  for (const line of lines) {
+    // Match ## or ### headings
+    const headingMatch = line.match(/^(#{2,3})\s+(.+)$/);
+    if (headingMatch) {
+      // Save previous section if it has content
+      if (currentContent.length > 0) {
+        const body = currentContent.join('\n').trim();
+        if (body.length > 20) {
+          sections.push({ title: currentTitle, content: body });
         }
-      );
-      imported++;
+      }
+      currentTitle = headingMatch[2];
+      currentContent = [];
+    } else if (!line.match(/^---/) && !line.match(/^# MEMORY/)) {
+      currentContent.push(line);
     }
   }
-  
+
+  // Save last section
+  if (currentContent.length > 0) {
+    const body = currentContent.join('\n').trim();
+    if (body.length > 20) {
+      sections.push({ title: currentTitle, content: body });
+    }
+  }
+
+  let imported = 0;
+  for (const section of sections) {
+    await association.remember(
+      `${section.title}\n\n${section.content}`,
+      { tags: ['memory-md', 'imported'], source: 'MEMORY.md' }
+    );
+    imported++;
+  }
+
   console.log(`[Association] Imported ${imported} sections from MEMORY.md`);
   return imported;
 }
