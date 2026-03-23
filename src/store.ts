@@ -3,11 +3,11 @@
  *
  * Handles persistence, retrieval, and lifecycle of memories.
  */
-
 import * as fs from 'fs';
 import * as path from 'path';
 import { Memory, AssociationConfig, AssociatedMemory } from './types.js';
 import { flattenKeywords, keywordMatchScore } from './extractor.js';
+import { isSimilarKeyword, fuzzyKeywordMatchScore } from './fuzzy.js';
 
 /**
  * In-memory index for fast keyword lookup
@@ -155,26 +155,63 @@ export class MemoryStore {
           candidateIds.add(id);
         }
       }
+
+      // If fuzzy matching enabled, also find similar keywords
+      if (this.config.enableFuzzy) {
+        const fuzzyThreshold = this.config.fuzzyThreshold ?? 0.8;
+        for (const [storedKeyword, ids] of this.index.keywordToMemories) {
+          if (isSimilarKeyword(keyword, storedKeyword, fuzzyThreshold)) {
+            for (const id of ids) {
+              candidateIds.add(id);
+            }
+          }
+        }
+      }
     }
 
     // Score each candidate
     const scored: AssociatedMemory[] = [];
-
     for (const id of candidateIds) {
       const memory = this.index.memories.get(id);
       if (!memory) continue;
 
-      // Calculate relevance
-      const relevance = keywordMatchScore(lowerKeywords, memory.keywords);
+      // Calculate relevance - use fuzzy score if enabled
+      let relevance: number;
+      let matchedKeywords: string[];
+      let reason: AssociatedMemory['reason'];
+
+      if (this.config.enableFuzzy) {
+        relevance = fuzzyKeywordMatchScore(lowerKeywords, memory.keywords, {
+          fuzzyThreshold: this.config.fuzzyThreshold ?? 0.8,
+        });
+        // Find matched keywords (exact and fuzzy)
+        const memoryKeywordSet = new Set(memory.keywords.map(k => k.toLowerCase()));
+        matchedKeywords = [];
+        for (const k of lowerKeywords) {
+          if (memoryKeywordSet.has(k)) {
+            matchedKeywords.push(k);
+          } else {
+            // Check for fuzzy match
+            for (const mk of memoryKeywordSet) {
+              if (isSimilarKeyword(k, mk, this.config.fuzzyThreshold ?? 0.8)) {
+                matchedKeywords.push(`${k}~${mk}`);
+                break;
+              }
+            }
+          }
+        }
+        reason = matchedKeywords.some(k => k.includes('~')) ? 'fuzzy-match' : 'keyword-match';
+      } else {
+        relevance = keywordMatchScore(lowerKeywords, memory.keywords);
+        const memoryKeywordSet = new Set(memory.keywords.map(k => k.toLowerCase()));
+        matchedKeywords = lowerKeywords.filter(k => memoryKeywordSet.has(k));
+        reason = 'keyword-match';
+      }
 
       if (relevance >= this.config.similarityThreshold) {
-        // Find matched keywords
-        const memoryKeywordSet = new Set(memory.keywords.map(k => k.toLowerCase()));
-        const matchedKeywords = lowerKeywords.filter(k => memoryKeywordSet.has(k));
-
         scored.push({
           memory,
-          reason: 'keyword-match',
+          reason,
           relevance,
           matchedKeywords,
         });
@@ -249,8 +286,10 @@ export class MemoryStore {
 export const DEFAULT_CONFIG: AssociationConfig = {
   memoryDir: './memories',
   maxWorkingSet: 100,
-  similarityThreshold: 0.1,
+  similarityThreshold: 0.05, // Lower default for fuzzy matching
   minKeywordMatches: 1,
   compressionAgeDays: 7,
   maxSurfacedMemories: 5,
+  enableFuzzy: true, // Enable by default
+  fuzzyThreshold: 0.75,
 };
