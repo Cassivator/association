@@ -4,12 +4,13 @@
   "description": "Automatic semantic memory recall for AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist/**/*", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
     "test": "node --test dist/**/*.test.js",
     "prepublishOnly": "npm run build && npm test"
   },
-  "keywords": ["ai", "memory", "semantic", "recall", "agents", "openclaw"],
+  "keywords": ["ai", "memory", "semantic", "recall", "agents", "openclaw", "fuzzy-matching"],
   "author": "Cassivator",
   "license": "MIT",
   "repository": {
@@ -23,8 +24,5 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "ai": "^4.0.0"
   }
 }
