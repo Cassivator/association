@@ -1,17 +1,25 @@
 {
-  "name": "association",
-  "version": "0.0.1",
+  "name": "@cassivator/association",
+  "version": "0.1.0",
   "description": "Automatic semantic memory recall for AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "node --test dist/**/*.test.js",
-    "lint": "eslint src/**/*.ts"
+    "prepublishOnly": "npm run build && npm test"
   },
-  "keywords": ["ai", "memory", "semantic", "recall", "agents"],
+  "keywords": ["ai", "memory", "semantic", "recall", "agents", "openclaw"],
   "author": "Cassivator",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cassivator/association.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cassivator/association/issues"
+  },
+  "homepage": "https://github.com/Cassivator/association#readme",
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
