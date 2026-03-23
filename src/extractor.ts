@@ -125,20 +125,24 @@ export function extractKeywords(text: string): ExtractedKeywords {
       actions.push(word);
     } else if (CONTEXT_WORDS.has(word)) {
       context.push(word);
-    } else if (/^[A-Z]/.test(word) || word.includes('_') || word.includes('.')) {
-      // Likely an entity/technical term
+    } else if (word.includes('_') || word.includes('.') || word.includes('-')) {
+      // Technical terms: snake_case, dot.notation, kebab-case
       entities.push(word);
     } else {
       topics.push(word);
     }
   }
 
-  // Extract pattern-based keywords
-  const technical = text.match(PATTERNS.technical) || [];
-  const urls = text.match(PATTERNS.url) || [];
-  const versions = text.match(PATTERNS.version) || [];
+  // Extract from original (non-lowercased) text for case-sensitive patterns
+  const originalText = text;
 
-  entities.push(...technical, ...urls, ...versions);
+  // Extract pattern-based keywords
+  const technical = originalText.match(PATTERNS.technical) || [];
+  const urls = originalText.match(PATTERNS.url) || [];
+  const versions = originalText.match(PATTERNS.version) || [];
+
+  const mentions = originalText.match(/([@#][a-zA-Z_][a-zA-Z0-9_]*)/g) || [];
+  entities.push(...technical, ...urls, ...versions, ...mentions);
 
   // Deduplicate
   return {
