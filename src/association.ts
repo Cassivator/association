@@ -190,9 +190,24 @@ export class Association {
   /**
    * Run maintenance (compression, cleanup)
    */
-  async maintain(): Promise<{ compressed: number }> {
+  async maintain(): Promise<{ compressed: number; pruned: number }> {
     const compressed = await this.store.compress();
-    return { compressed };
+    const pruned = await this.store.prune();
+    return { compressed, pruned };
+  }
+
+  /**
+   * Delete a specific memory
+   */
+  async forget(id: string): Promise<boolean> {
+    return this.store.delete(id);
+  }
+
+  /**
+   * Get statistics about the memory store
+   */
+  getStats(): ReturnType<MemoryStore['getStats']> {
+    return this.store.getStats();
   }
 
   /**

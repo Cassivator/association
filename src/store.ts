@@ -278,6 +278,128 @@ export class MemoryStore {
 
     return compressed;
   }
+
+  /**
+   * Prune memories that exceed working set limit
+   * Removes least important, least accessed, oldest memories first
+   */
+  async prune(maxKeep?: number): Promise<number> {
+    const limit = maxKeep ?? this.config.maxWorkingSet;
+    const current = this.index.memories.size;
+
+    if (current <= limit) {
+      return 0;
+    }
+
+    const toRemove = current - limit;
+
+    // Score memories for removal (higher = more likely to remove)
+    const scored = Array.from(this.index.memories.values()).map(m => ({
+      memory: m,
+      removeScore: this.calculateRemovalScore(m),
+    }));
+
+    // Sort by removal score (highest first)
+    scored.sort((a, b) => b.removeScore - a.removeScore);
+
+    // Remove the top candidates
+    let removed = 0;
+    for (let i = 0; i < toRemove && i < scored.length; i++) {
+      const { memory } = scored[i];
+      await this.delete(memory.id);
+      removed++;
+    }
+
+    return removed;
+  }
+
+  /**
+   * Calculate how likely a memory should be removed (0-1, higher = more likely)
+   */
+  private calculateRemovalScore(memory: Memory): number {
+    let score = 0;
+
+    // Lower importance = more likely to remove
+    score += (1 - memory.importance) * 0.4;
+
+    // Lower access count = more likely to remove
+    score += Math.max(0, 1 - memory.accessCount / 10) * 0.3;
+
+    // Older = more likely to remove (but less weight)
+    const ageDays = (Date.now() - memory.createdAt.getTime()) / (24 * 60 * 60 * 1000);
+    score += Math.min(1, ageDays / 30) * 0.2;
+
+    // Higher compression level = more likely to remove
+    score += (memory.compressionLevel / 2) * 0.1;
+
+    return score;
+  }
+
+  /**
+   * Delete a memory by ID
+   */
+  async delete(id: string): Promise<boolean> {
+    const memory = this.index.memories.get(id);
+    if (!memory) {
+      return false;
+    }
+
+    // Remove from keyword index
+    for (const keyword of memory.keywords) {
+      const ids = this.index.keywordToMemories.get(keyword);
+      if (ids) {
+        ids.delete(id);
+        if (ids.size === 0) {
+          this.index.keywordToMemories.delete(keyword);
+        }
+      }
+    }
+
+    // Remove from memory index
+    this.index.memories.delete(id);
+
+    // Delete file
+    const filePath = path.join(this.memoryDir, `${id}.json`);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    return true;
+  }
+
+  /**
+   * Get statistics about the memory store
+   */
+  getStats(): {
+    count: number;
+    totalSize: number;
+    avgImportance: number;
+    avgAccessCount: number;
+    compressionLevels: { raw: number; summarized: number; distilled: number };
+  } {
+    const memories = Array.from(this.index.memories.values());
+    const totalSize = memories.reduce((sum, m) => sum + m.content.length, 0);
+    const avgImportance = memories.length > 0
+      ? memories.reduce((sum, m) => sum + m.importance, 0) / memories.length
+      : 0;
+    const avgAccessCount = memories.length > 0
+      ? memories.reduce((sum, m) => sum + m.accessCount, 0) / memories.length
+      : 0;
+
+    const compressionLevels = {
+      raw: memories.filter(m => m.compressionLevel === 0).length,
+      summarized: memories.filter(m => m.compressionLevel === 1).length,
+      distilled: memories.filter(m => m.compressionLevel === 2).length,
+    };
+
+    return {
+      count: memories.length,
+      totalSize,
+      avgImportance,
+      avgAccessCount,
+      compressionLevels,
+    };
+  }
 }
 
 /**
