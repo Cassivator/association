@@ -183,11 +183,22 @@ const result = await processMessage("tell me about Sophie");
 - **Personal agents** - remember user preferences, past conversations, important context
 - **Coding agents** - remember code patterns, past debugging sessions, project decisions
 - **Research agents** - remember findings, sources, connections between topics
-
 ## Status
 
-✅ 67 tests passing  
-🚧 Work in progress - core features stable
+✅ 93 tests passing
+✅ v0.1: keyword extraction, fuzzy matching, progressive compression
+✅ v0.2: composite scoring (recency, importance, novelty), diversity selection
+
+## Relevance Scoring (v0.2)
+
+Association uses composite scoring to rank memories, addressing the "retrieval noise" problem:
+
+- **Keyword match**: primary signal (how many keywords overlap)
+- **Recency**: exponential decay with 7-day half-life (recent memories rank higher)
+- **Importance**: weighted by memory.importance field
+- **Novelty**: penalizes over-accessed memories
+
+This helps surface the *right* memories, not just any matching memories.
 
 ## License
 
