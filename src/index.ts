@@ -9,20 +9,29 @@ export { MemoryStore, DEFAULT_CONFIG } from './store.js';
 export { extractKeywords, flattenKeywords, keywordMatchScore } from './extractor.js';
 export { compressMemory, shouldCompress, getDisplayContent } from './compressor.js';
 export {
-  levenshteinDistance,
-  similarity,
-  isSimilarKeyword,
-  findBestMatch,
-  ngrams,
-  ngramSimilarity,
-  fuzzyKeywordMatchScore,
+	levenshteinDistance,
+	similarity,
+	isSimilarKeyword,
+	findBestMatch,
+	ngrams,
+	ngramSimilarity,
+	fuzzyKeywordMatchScore,
 } from './fuzzy.js';
-
+export {
+	recencyScore,
+	noveltyScore,
+	importanceScore,
+	compositeScore,
+	reRankMemories,
+	diversityScore,
+	selectDiverseMemories,
+	DEFAULT_SCORER_CONFIG,
+} from './scorer.js';
 export type {
-  Memory,
-  MemoryAssociation,
-  ExtractedKeywords,
-  AssociationConfig,
-  AssociatedMemory,
-  IncomingMessage,
+	Memory,
+	MemoryAssociation,
+	ExtractedKeywords,
+	AssociationConfig,
+	AssociatedMemory,
+	IncomingMessage,
 } from './types.js';
