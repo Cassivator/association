@@ -109,3 +109,39 @@ export interface IncomingMessage {
     replyTo?: string;
   };
 }
+
+/**
+ * Feedback on memory retrieval quality (for RL-based improvement)
+ */
+export interface MemoryFeedback {
+  /** Memory that was surfaced or considered */
+  memoryId: string;
+  /** Whether this memory was surfaced to the agent */
+  surfaced: boolean;
+  /** Whether the agent referenced/used this memory */
+  used: boolean;
+  /** Whether this memory led to a good outcome (null if unknown) */
+  helpful: boolean | null;
+  /** When feedback was recorded */
+  timestamp: Date;
+  /** Context of the feedback (optional) */
+  context?: string;
+}
+
+/**
+ * Aggregate performance metrics for a memory
+ */
+export interface MemoryPerformance {
+  /** Memory ID */
+  memoryId: string;
+  /** How often this memory was surfaced */
+  surfaceCount: number;
+  /** How often surfaced memories were used */
+  usedCount: number;
+  /** Success rate (usedCount / surfaceCount) */
+  successRate: number;
+  /** Last time this memory was accessed */
+  lastAccessedAt: Date;
+  /** Days since last useful access (used=true) */
+  daysSinceUseful: number | null;
+}
