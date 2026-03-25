@@ -262,3 +262,36 @@ This feedback enables future RL-based improvements:
 - Adaptive scoring weights
 - Automatic memory pruning
 - Learning which memories to store
+
+## Adaptive Scoring (v0.3 Phase 2)
+
+Association can learn which scoring weights work best over time:
+
+```typescript
+import { createWeightAdapter } from '@cassivator/association';
+
+const adapter = createWeightAdapter();
+
+// Record which weight contributed to each surfaced memory
+adapter.recordContribution({
+  memoryId: 'mem-123',
+  weight: 'recency',  // Which weight was most influential
+  contribution: 0.7,  // How much this weight affected ranking (0-1)
+  used: true,         // Whether the memory was actually used
+});
+
+// Get adapted weights after enough feedback
+const newConfig = adapter.getConfig();
+console.log(newConfig.recencyWeight);  // May have increased/decreased
+
+// Check which weights are performing well
+const stats = adapter.getStats();
+console.log(stats.get('recency')?.successRate);
+```
+
+This enables:
+- Automatic weight tuning based on actual usage
+- Better retrieval quality over time
+- Data-driven decisions about what matters
+
+Note: Requires integration with the scorer to track which weight contributed most to each memory's ranking.

@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { FeedbackTracker, createFeedbackTracker } from '../src/feedback.js';
+import { FeedbackTracker, createFeedbackTracker } from './feedback.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 

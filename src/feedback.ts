@@ -144,7 +144,7 @@ export class FeedbackTracker {
     return all.filter(m => 
       m.surfaceCount >= threshold.minSurfaces &&
       m.successRate <= threshold.maxSuccessRate &&
-      (m.daysSinceUseful !== null && m.daysSinceUseful >= threshold.minDaysSinceUseful)
+      (m.daysSinceUseful === null || m.daysSinceUseful >= threshold.minDaysSinceUseful)
     );
   }
 

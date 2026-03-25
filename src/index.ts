@@ -42,3 +42,10 @@ export type {
 } from './types.js';
 
 export { FeedbackTracker, createFeedbackTracker } from './feedback.js';
+
+export { WeightAdapter, createWeightAdapter, DEFAULT_ADAPTIVE_CONFIG } from './adaptive.js';
+
+export type {
+  AdaptiveConfig,
+  WeightContribution,
+} from './adaptive.js';
