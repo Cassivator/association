@@ -35,3 +35,10 @@ export type {
 	AssociatedMemory,
 	IncomingMessage,
 } from './types.js';
+
+export type {
+  MemoryFeedback,
+  MemoryPerformance,
+} from './types.js';
+
+export { FeedbackTracker, createFeedbackTracker } from './feedback.js';

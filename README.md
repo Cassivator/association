@@ -188,6 +188,39 @@ const result = await processMessage("tell me about Sophie");
 ✅ 93 tests passing
 ✅ v0.1: keyword extraction, fuzzy matching, progressive compression
 ✅ v0.2: composite scoring (recency, importance, novelty), diversity selection
+✅ v0.3: feedback tracking (Phase 1 of RL integration)
+
+## Feedback API (v0.3)
+
+Association can learn from feedback about which surfaced memories are actually useful:
+
+```typescript
+const result = await association.process({ content: "what do you know about Sophie?" });
+
+// After using surfaced memories in your response, mark them as used
+await association.markUsed(result.surfacedIds[0], true);
+
+// If a memory was not relevant, mark as unused (noise signal)
+await association.markUnused(result.surfacedIds[1]);
+
+// Check performance metrics
+const perf = association.getMemoryPerformance(memoryId);
+console.log(perf.successRate); // How often this memory is useful
+
+// Find memories that should be pruned
+const prunable = association.findPrunableMemories();
+```
+
+This feedback enables future RL-based improvements:
+- Adaptive scoring weights
+- Automatic memory pruning
+- Learning which memories to store
+
+## Relevance Scoring (v0.2)
+
+✅ 93 tests passing
+✅ v0.1: keyword extraction, fuzzy matching, progressive compression
+✅ v0.2: composite scoring (recency, importance, novelty), diversity selection
 
 ## Relevance Scoring (v0.2)
 
@@ -203,3 +236,29 @@ This helps surface the *right* memories, not just any matching memories.
 ## License
 
 MIT
+
+## Feedback API (v0.3)
+
+Association can learn from feedback about which surfaced memories are actually useful:
+
+```typescript
+const result = await association.process({ content: "what do you know about Sophie?" });
+
+// After using surfaced memories in your response, mark them as used
+await association.markUsed(result.surfacedIds[0], true);
+
+// If a memory was not relevant, mark as unused (noise signal)
+await association.markUnused(result.surfacedIds[1]);
+
+// Check performance metrics
+const perf = association.getMemoryPerformance(memoryId);
+console.log(perf.successRate); // How often this memory is useful
+
+// Find memories that should be pruned
+const prunable = association.findPrunableMemories();
+```
+
+This feedback enables future RL-based improvements:
+- Adaptive scoring weights
+- Automatic memory pruning
+- Learning which memories to store
