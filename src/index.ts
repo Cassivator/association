@@ -49,3 +49,11 @@ export type {
   AdaptiveConfig,
   WeightContribution,
 } from './adaptive.js';
+
+export { OperationDecider, createOperationDecider, DEFAULT_OPERATION_CONFIG } from './operations.js';
+
+export type {
+  MemoryOperation,
+  OperationDecision,
+  OperationConfig,
+} from './operations.js';
