@@ -131,4 +131,20 @@ Sophie - my human, builds OriginOS
     const result = await association.process({ content: 'testing TypeScript' });
     assert.ok(result.surfaced.length <= 5, 'Should respect maxSurfacedMemories limit');
   });
+
+  it('uses OperationDecider in process()', async () => {
+    // Short ephemeral content should result in NOOP
+    const ephemeralResult = await association.process({ content: 'ok' });
+    assert.ok(ephemeralResult.operationDecision, 'Should have operation decision');
+    assert.strictEqual(ephemeralResult.operationDecision!.operation, 'NOOP');
+    assert.strictEqual(ephemeralResult.memoryCreated, false);
+
+    // Substantial content should result in ADD
+    const newResult = await association.process({ 
+      content: 'This is a substantial piece of information about machine learning' 
+    });
+    assert.ok(newResult.operationDecision, 'Should have operation decision');
+    assert.strictEqual(newResult.operationDecision!.operation, 'ADD');
+    assert.strictEqual(newResult.memoryCreated, true);
+  });
 });

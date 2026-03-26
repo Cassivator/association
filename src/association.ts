@@ -8,6 +8,7 @@ import { MemoryStore, DEFAULT_CONFIG } from './store.js';
 import { extractKeywords, flattenKeywords } from './extractor.js';
 import { reRankMemories, selectDiverseMemories, DEFAULT_SCORER_CONFIG } from './scorer.js';
 import { FeedbackTracker, createFeedbackTracker, DEFAULT_FEEDBACK_CONFIG } from './feedback.js';
+import { OperationDecider, createOperationDecider, OperationDecision, DEFAULT_OPERATION_CONFIG } from './operations.js';
 import { AssociationConfig, AssociatedMemory, IncomingMessage, Memory, MemoryPerformance } from './types.js';
 
 /**
@@ -22,6 +23,8 @@ export interface ProcessResult {
   memoryCreated: boolean;
   /** IDs of surfaced memories (for feedback tracking) */
   surfacedIds: string[];
+  /** The operation decision that was made */
+  operationDecision?: OperationDecision;
 }
 
 /**
@@ -33,6 +36,7 @@ export class Association {
   private autoStore: boolean;
   private minImportance: number;
   private feedbackTracker: FeedbackTracker;
+  private operationDecider: OperationDecider;
 
   constructor(config?: Partial<AssociationConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -42,6 +46,7 @@ export class Association {
     this.feedbackTracker = createFeedbackTracker({
       dataDir: this.config.memoryDir + '/feedback',
     });
+    this.operationDecider = createOperationDecider();
   }
 
   /**
@@ -84,9 +89,16 @@ export class Association {
       await this.store.touch(memory.id);
     }
 
-    // Decide whether to store this as a new memory
+    // Use OperationDecider to determine what to do with this content
+    const operationDecision = this.operationDecider.decide(
+      message.content,
+      keywords,
+      surfaced
+    );
+
+    // Execute the decided operation
     let memoryCreated = false;
-    if (this.autoStore && this.shouldStore(message, extracted, surfaced)) {
+    if (this.autoStore && operationDecision.operation === 'ADD') {
       const importance = this.calculateImportance(message, extracted, surfaced);
       await this.store.store(message.content, keywords, {
         source: message.metadata?.channel,
@@ -94,11 +106,17 @@ export class Association {
         tags: extracted.context,
       });
       memoryCreated = true;
+    } else if (operationDecision.operation === 'UPDATE' && operationDecision.targetId) {
+      // For now, UPDATE just boosts the target memory's importance
+      // Full merge logic would go here in the future
+      await this.store.touch(operationDecision.targetId);
     }
+    // NOOP and DELETE don't create memories during process()
+    // DELETE is handled separately via maintain()
 
     const surfacedIds = surfaced.map(s => s.memory.id);
 
-    return { surfaced, keywords, memoryCreated, surfacedIds };
+    return { surfaced, keywords, memoryCreated, surfacedIds, operationDecision };
   }
 
   /**
